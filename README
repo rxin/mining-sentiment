@@ -1,0 +1,18 @@
+A naïve Bayes sentiment classifier.
+
+Requires http://www.scalanlp.org/
+
+First build scalala:
+git clone http://github.com/scalala/Scalala
+cd Scalala
+./sbt compile
+./sbt proguard
+./sbt publish-local
+
+Then build scalanlp:
+git clone http://github.com/scalanlp/scalanlp-core
+cd scalanlp-core
+./sbt publish-local
+
+
+
