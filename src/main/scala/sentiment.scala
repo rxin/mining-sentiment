@@ -1,16 +1,15 @@
 package sentiment
 
-import scalanlp.text.tokenize._ 
-import scala.collection.JavaConversions._
-import scala.io.Source
-
 import java.io.File
 
 import scalala.tensor.mutable._
+import scalanlp.data._
+import scalanlp.text.tokenize._ 
 
+import scala.collection.JavaConversions._
+import scala.io.Source
 import scala.math._
 import scala.util.Random
-import scalanlp.data._
 
 
 object Sentiment {
@@ -23,12 +22,12 @@ object Sentiment {
 
   case class Parameters(stemmer: String => String, alpha: Double, binaryCounts: Boolean)
 
-  // TODO: index words
-
   type Word = String
   type Document = Seq[String]
-
+  
   val masterRandom = Random
+  val dataPath = "./review_polarity/txt_sentoken"
+  val tokenizer = SimpleEnglishTokenizer.apply()
 
   case class Model(parameters: Parameters) {
     val wordSet = new scala.collection.mutable.HashSet[Word]
@@ -59,17 +58,6 @@ object Sentiment {
         counts(label, word) += 1
         labelCounts(label) += 1
       }
-    }
-  }
-
-  val dataPath = "./review_polarity/txt_sentoken"
-
-  val tokenizer = SimpleEnglishTokenizer.apply()
-
-  def tokenizeFiles(files: Seq[File]) = {
-    for (f <- files) yield {
-      val tokens = tokenizer(Source.fromFile(f).mkString).toIndexedSeq
-      Pair(f getName, tokens)
     }
   }
 
@@ -107,9 +95,15 @@ object Sentiment {
            ((1 + betaSq) * counts("tp") + betaSq * counts("fn") + counts("fp"))
   }
 
-  // Instructor recommends evaluating using F1 or AUC.
   def evaluate(model: Model, testData: Seq[LabeledDocument[SentimentLabel, Word]]) = {
     (f1Score(model, testData, Pos) + f1Score(model, testData, Neg)) * 0.5
+  }
+
+  def tokenizeFiles(files: Seq[File]) = {
+    for (f <- files) yield {
+      val tokens = tokenizer(Source.fromFile(f).mkString).toIndexedSeq
+      Pair(f getName, tokens)
+    }
   }
 
   def getLabeledDocuments(files : Seq[File], label : SentimentLabel) = {
@@ -119,7 +113,6 @@ object Sentiment {
   }
 
   def main(args: Array[String]) {
-
     val neg = getLabeledDocuments(new File(dataPath, "neg").listFiles, Neg)
     val pos = getLabeledDocuments(new File(dataPath, "pos").listFiles, Pos)
     val all = masterRandom.shuffle(neg ++ pos)
@@ -129,7 +122,7 @@ object Sentiment {
       collection.immutable.Range.Double(log(0.1), log(3), log(2)/2).map(x => exp(x))
     val sliceSize = all.size / 10
    
-    List(false, true).map { binaryCount => {
+    List(false, true).map { binaryCount => { // Multinomial vs Bernoulli
       List(false, true).map { stem => {
         alphas.map { alpha => {
           val stemmer = if (stem) PorterStemmer else ((x : String) => x)
@@ -149,6 +142,5 @@ object Sentiment {
       }}
     }}
   }
-
 }
 
