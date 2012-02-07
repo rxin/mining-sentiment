@@ -26,5 +26,8 @@ series_binary_stem.plot('binomial-stem', style=':')
 plt.legend(loc='lower right')
 #plt.margins(0)
 
+plt.xlabel('alpha')
+plt.ylabel('F1 score')
+
 plt.savefig("all-combo.pdf")
 
