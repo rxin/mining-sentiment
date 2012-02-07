@@ -1,7 +1,66 @@
 \documentclass{article}
+
+\usepackage{amsmath}
+
+\newcommand{\PosC}{\mathrm{Pos}}
+\newcommand{\NegC}{\mathrm{Neg}}
+
 \begin{document}
 
-\section{Top Term Weights}
+\section{Method}
+
+\subsection{Document Representation}
+
+We tried four different document representations: as bags of words for the multinomial model; as sets of words for the Bernoulli model; and both of these after applying the Porter Stemming Algorithm.
+
+\subsection{Model and Training}
+
+We use a na\"ive Bayes classifier: for a class \(c \in \{\PosC, \NegC\}\) and document \(d\) consisting of words \(w_{d,1},\dotsc,w_{d,m_d}\) (where each word occurs at most once in the Bernoulli version),
+\[\Pr(c|d)=\frac{\Pr(d|c)\Pr(c)}{\Pr(d)}\]
+where
+\[\Pr(d|c)=\sum_{i=1}^{m_d}\Pr(w_i|c)\ldotp\]
+and our training procedure produces
+\[\Pr(w|c)=\frac{n_{w,c}+\alpha}{\sum_{w'}(n_{w',c}+\alpha)}\ldotp\]
+We try different values for \(\alpha\) as explained in Section~\ref{sec:EvalAndTuning}.
+
+\subsection{Evaluation and Parameter Tuning}
+\label{sec:EvalAndTuning}
+
+To avoid confusion, we will refer to positive reviews as ``favorable'' and negative reviews as ``disfavorable'' in this section.  We chose evaluate the model's performance on a testing set using the \(F_1\) score.  The \(F_1\) score is defined as:
+\[
+  F_1=
+  \frac
+      {2\cdot\#\text{true positive}}
+      {2\cdot\#\text{true positive}+\#\text{false negative}+\#\text{false positive}}
+  \ldotp
+\]
+We had some difficulty interpreting this in the context of a classification task.
+We decided that the score makes sense when focusing on a particular label.
+For example, if we are interested in the model's performance with the label ``favorable'', then we count test results as follows.
+
+\begin{tabular}{c|c|c}
+  true class & model classification & interpretation for ``favorable'' \\
+  \hline
+  favorable & favorable & true positive \\
+  favorable & disfavorable & false negative \\
+  disfavorable & favorable & false positive \\
+  disfavorable & disfavorable & true negative \\
+\end{tabular}
+
+We define the resulting score to be \(F_1(\PosC)\).
+We define \(F_1(\NegC)\) the same way but with the roles of ``favorable'' and ``disfavorable'' reversed, and score documents as
+\[\text{document score}=\tfrac12 (F_1(\PosC) + F_1(\NegC)) \ldotp\]
+The score of the model is the sum of the document scores.
+
+We had three parameters to tune: multinomial or Bernoulli; whether to stem words; and the smoothing parameter \(\alpha\).  We tried all combinations of the first two parameters, with \(\alpha\) varying between \(0.1\) and \(30\) with a ratio of \(\sqrt{2}\) between successive \(\alpha\)-values (\(0.1, 0.1\sqrt{2}, 0.2, 0.2\sqrt{2}, \dotsc\)).
+
+We used 10-fold cross-validation to evaluate the performance of our algorithm.  We chose a random order for the documents once, and for each parameter setting, we evaluated the model ten times (using successive slices as the held-out test set) and recorded the average score of the model on those ten sets.
+
+\section{Results}
+
+TODO
+
+\subsection{Top Term Weights}
 
 % Program output:
 %(false,false,2.2,0.822)
@@ -13,6 +72,7 @@
 
 This is for our best set of model parameters: multinomial model; no stemming; \(\alpha=2.2\).
 
+\begin{figure}
 \begin{tabular}{c|c}
     \multicolumn{2}{c}{Tokens most likely to be positive} \\
     token & \(log(p_+ / p_-)\) \\
@@ -28,7 +88,6 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     leila & 2.557 \\
     sweetback & 2.490
 \end{tabular}
-
 \begin{tabular}{c|c}
     \multicolumn{2}{c}{Tokens most likely to be negative} \\
     token & \(log(p_+ / p_-)\) \\
@@ -42,9 +101,12 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     1900 & -2.451 \\
     pokemon & -2.407 \\
     bye & -2.407 \\
-    jawbreaker & -2.404))
+    jawbreaker & -2.404
 \end{tabular}
+\caption{Highest-weighted tokens.}
+\end{figure}
 
+\begin{figure}
 \begin{tabular}{c|c}
     \multicolumn{2}{c}{Most influential positive tokens} \\
     token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
@@ -60,7 +122,6 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     in & 1207 \\
     a & 976.4
 \end{tabular}
-
 \begin{tabular}{c|c}
     \multicolumn{2}{c}{Most influential negative tokens} \\
     token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
@@ -76,5 +137,7 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     ! & -974.1 \\
     no & -939.7
 \end{tabular}
+\caption{Tokens with highest \((\mathrm{weight} \cdot \# \mathrm{occurrences})\).}
+\end{figure}
 
 \end{document}
