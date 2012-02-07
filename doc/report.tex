@@ -1,0 +1,80 @@
+\documentclass{article}
+\begin{document}
+
+\section{Top Term Weights}
+
+% Program output:
+%(false,false,2.2,0.822)
+%Pos: List((shrek,3.230), (mulan,3.138), (flynt,2.9035111177554587), (gattaca,2.8346396128564333), (ordell,2.759), (truman's,2.6187512324233975), (lebowski,2.6168669281160994), (guido,2.588), (leila,2.55661945131639), (sweetback,2.490))
+%Neg: List((nbsp,-3.4045562750852802), (seagal,-3.1096499422617025), (brenner,-2.747), (sphere,-2.572643333537556), (schumacher,-2.556), (stigmata,-2.493), (1900,-2.451), (pokemon,-2.406976211648738), (bye,-2.406976211648738), (jawbreaker,-2.404))
+%Pos (mf): List((,,6988.590), (the,5680.522), (and,5062.829), (is,3480.295), (of,3031.905), (his,2302.1047630517264), (as,2103.495762997044), (he,1394.452), (in,1206.934), (a,976.3928793058776))
+%Neg (mf): List((.,-3176.335), (",-2935.369), (i,-1874.9698007890427), (movie,-1832.499865514896), (?,-1631.999), (bad,-1574.092), (this,-1474.2238454822032), (have,-1308.290), (!,-974.078), (no,-939.664))
+
+
+This is for our best set of model parameters: multinomial model; no stemming; \(\alpha=2.2\).
+
+\begin{tabular}{c|c}
+    \multicolumn{2}{c}{Tokens most likely to be positive} \\
+    token & \(log(p_+ / p_-)\) \\
+    \hline
+    shrek & 3.230 \\
+    mulan & 3.138 \\
+    flynt & 2.904 \\
+    gattaca & 2.835 \\
+    ordell & 2.759 \\
+    truman's & 2.619 \\
+    lebowski & 2.617 \\
+    guido & 2.588 \\
+    leila & 2.557 \\
+    sweetback & 2.490
+\end{tabular}
+
+\begin{tabular}{c|c}
+    \multicolumn{2}{c}{Tokens most likely to be negative} \\
+    token & \(log(p_+ / p_-)\) \\
+    \hline
+    nbsp & -3.405 \\
+    seagal & -3.110 \\
+    brenner & -2.747 \\
+    sphere & -2.573 \\
+    schumacher & -2.556 \\
+    stigmata & -2.493 \\
+    1900 & -2.451 \\
+    pokemon & -2.407 \\
+    bye & -2.407 \\
+    jawbreaker & -2.404))
+\end{tabular}
+
+\begin{tabular}{c|c}
+    \multicolumn{2}{c}{Most influential positive tokens} \\
+    token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
+    \hline
+     , & 6989 \\
+    the & 5681 \\
+    and & 5063 \\
+    is & 3480 \\
+    of & 3032 \\
+    his & 2302 \\
+    as & 2103 \\
+    he & 1394 \\
+    in & 1207 \\
+    a & 976.4
+\end{tabular}
+
+\begin{tabular}{c|c}
+    \multicolumn{2}{c}{Most influential negative tokens} \\
+    token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
+    \hline
+    . & -3176 \\
+    " & -2935 \\
+    i & -1875 \\
+    movie & -1832 \\
+    ? & -1632 \\
+    bad & -1574 \\
+    this & -1474 \\
+    have & -1308 \\
+    ! & -974.1 \\
+    no & -939.7
+\end{tabular}
+
+\end{document}
