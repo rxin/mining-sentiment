@@ -90,9 +90,8 @@ For example, if we are interested in the model's performance with the label ``fa
 \end{tabular}
 
 We define the resulting score to be \(F_1(\PosC)\).
-We define \(F_1(\NegC)\) the same way but with the roles of ``favorable'' and ``disfavorable'' reversed, and score documents as
-\[\text{document score}=\tfrac12 (F_1(\PosC) + F_1(\NegC)) \ldotp\]
-The score of the model is the sum of the document scores.
+We define \(F_1(\NegC)\) the same way but with the roles of ``favorable'' and ``disfavorable'' reversed, and score the model as
+\[\text{model score}=\tfrac12 (F_1(\PosC) + F_1(\NegC)) \ldotp\]
 
 We had three parameters to tune: multinomial or Bernoulli; whether to stem words; and the smoothing parameter \(\alpha\).  We tried all combinations of the first two parameters, with \(\alpha\) varying between \(0.1\) and \(30\) with a ratio of \(\sqrt{2}\) between successive \(\alpha\)-values (\(0.1, 0.1\sqrt{2}, 0.2, 0.2\sqrt{2}, \dotsc\)).  Using a geometric series allowed us to try many ranges of size for the \(\alpha\) parameter; once we identified the range with the best performance, we did a second pass with a finer range of \(\alpha\)-values as explained in Section~\ref{sec:Results}.
 
