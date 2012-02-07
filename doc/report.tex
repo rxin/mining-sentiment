@@ -3,26 +3,68 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 
+\DeclareMathOperator{\Argmax}{argmax}
 \newcommand{\PosC}{\mathrm{Pos}}
 \newcommand{\NegC}{\mathrm{Neg}}
 
 \begin{document}
 
+\section{The Problem}
+
+We design an algorithm to solve the following problem.
+We are presented with a set of movie reviews from Pang and Lee's movie sentiment data set~\cite{Pang+Lee:04a}.
+Each review is a sequence of tokens (words or punctuation marks).
+Some of the reviews have a label of \(\PosC\) or \(\NegC\) (the training set) and for other reviews, the label has been removed.
+Our task is to guess the missing labels.
+
 \section{Method}
+
+\subsection{Model}
+
+We use a na\"ive Bayes model, in which the documents are generated according to the following process.
+First, a class \(c\) is chosen from a probability distribution \(\Pr(c)\).
+Then, a document from class \(c\) is generated.
+We tried a multinomial model and a Bernoulli model to model this process.
+\begin{itemize}
+\item \emph{Multinomial model.}  A document length \(m_d\) is chosen and \(m_d\) words \(w_{d,1}, \dotsc, w_{d,m_d}\) are chosen independently from a distribution \(\Pr(w|c)\).
+\item \emph{Bernoulli model.}  For each word \(w\) in the vocabulary, \(w\) is added to the document with probability \(\Pr(w|c)\).
+\end{itemize}
+The distributions \(\Pr(c)\) and \(\Pr(w|c)\) are parameters of the model.
 
 \subsection{Document Representation}
 
-We tried four different document representations: as bags of words for the multinomial model; as sets of words for the Bernoulli model; and both of these after applying the Porter Stemming Algorithm.
+We represent each document \(d\) as a list of words \(w_{d,1}, \dotsc, w_{d,m_d}\).
+In the simplest case, \(w_{d,i}\) was equal to the \(i\)-th token of the document as it appeared in the data set.
+This is an appropriate representation when using the multinomial model of document generation.
+When using the Bernoulli model, we removed duplicate occurrences of words.
 
-\subsection{Model and Training}
+We tried using the Porter stemming algorithm.
+Stemming is the process of reducing inflected and derived words to their stem \cite{porter-stemmer}.
+Word \(w_{d,i}\) in our document representation is then the result of applying the stemming function to the \(i\)-th word of the document as it appeared in the input data set.
+Stemming incidentally reduces the number of features used in the classifier.
+For example, using the Porter Stemmer \cite{porter-stemmer}, both ``apply'' and ``applying'' become the same stem ``appli''.
 
-We use a na\"ive Bayes classifier: for a class \(c \in \{\PosC, \NegC\}\) and document \(d\) consisting of words \(w_{d,1},\dotsc,w_{d,m_d}\) (where each word occurs at most once in the Bernoulli version),
+
+In all, we tried four different document representations: multinomial and Bernoulli, together with not-stemmed words and word stems.
+In Section~\ref{sec:EvalAndTuning}, we explain how we chose among these four possibilities.
+
+\subsection{Training and Classification}
+
+Using the na\"ive Bayes classifier, for a class \(c \in \{\PosC, \NegC\}\) and document \(d\) consisting of words \(w_{d,1},\dotsc,w_{d,m_d}\) (where each word occurs at most once in the Bernoulli version), we have
 \[\Pr(c|d)=\frac{\Pr(d|c)\Pr(c)}{\Pr(d)}\]
 where
 \[\Pr(d|c)=\sum_{i=1}^{m_d}\Pr(w_i|c)\ldotp\]
-and our training procedure produces
+Our training procedure sets \(\Pr(c)\) to be the fraction of documents with class \(c\),%
+\footnote{After inspecting the data set, we found this ratio to be \(1/2\).  Setting \(P(c)\) to \(1/2\) is equivalent to dropping the term, so we ignored it in our implementation.}
+and sets
 \[\Pr(w|c)=\frac{n_{w,c}+\alpha}{\sum_{w'}(n_{w',c}+\alpha)}\ldotp\]
-We try different values for \(\alpha\) as explained in Section~\ref{sec:EvalAndTuning}.
+When testing, our model classifies a document \(d\) as \(\Argmax_c\Pr(c|d)\).
+
+\(\alpha\) is a parameter of the model.
+Setting \(\alpha=0\), training would maximumize the likelihood of the data given the parameters.
+Unfortunately, the maximum likelihood parameters set \(\Pr(d|c)=0\) whenever document \(d\) contains a word that never occurred in class \(c\) in the training data.
+It is desirable to allow some new uses of words in new documents, so we set \(\alpha\) to be a positive number.
+We explain how we choose the value of \(\alpha\) in Section~\ref{sec:EvalAndTuning}.
 
 \subsection{Evaluation and Parameter Tuning}
 \label{sec:EvalAndTuning}
@@ -49,9 +91,8 @@ For example, if we are interested in the model's performance with the label ``fa
 \end{tabular}
 
 We define the resulting score to be \(F_1(\PosC)\).
-We define \(F_1(\NegC)\) the same way but with the roles of ``favorable'' and ``disfavorable'' reversed, and score documents as
-\[\text{document score}=\tfrac12 (F_1(\PosC) + F_1(\NegC)) \ldotp\]
-The score of the model is the sum of the document scores.
+We define \(F_1(\NegC)\) the same way but with the roles of ``favorable'' and ``disfavorable'' reversed, and score the model as
+\[\text{model score}=\tfrac12 (F_1(\PosC) + F_1(\NegC)) \ldotp\]
 
 We had three parameters to tune: multinomial or Bernoulli; whether to stem words; and the smoothing parameter \(\alpha\).  We tried all combinations of the first two parameters, with \(\alpha\) varying between \(0.1\) and \(30\) with a ratio of \(\sqrt{2}\) between successive \(\alpha\)-values (\(0.1, 0.1\sqrt{2}, 0.2, 0.2\sqrt{2}, \dotsc\)).  Using a geometric series allowed us to try many ranges of size for the \(\alpha\) parameter; once we identified the range with the best performance, we did a second pass with a finer range of \(\alpha\)-values as explained in Section~\ref{sec:Results}.
 
@@ -92,6 +133,7 @@ We observed that stemming the words had a negative impact on the F1 score, while
 
 
 \subsection{Top Term Weights}
+\label{sec:TopWords}
 
 % Program output:
 %(false,false,2.2,0.822)
@@ -100,13 +142,16 @@ We observed that stemming the words had a negative impact on the F1 score, while
 %Pos (mf): List((,,6988.590), (the,5680.522), (and,5062.829), (is,3480.295), (of,3031.905), (his,2302.1047630517264), (as,2103.495762997044), (he,1394.452), (in,1206.934), (a,976.3928793058776))
 %Neg (mf): List((.,-3176.335), (",-2935.369), (i,-1874.9698007890427), (movie,-1832.499865514896), (?,-1631.999), (bad,-1574.092), (this,-1474.2238454822032), (have,-1308.290), (!,-974.078), (no,-939.664))
 
-
-This is for our best set of model parameters: multinomial model; no stemming; \(\alpha=2.2\).
+To better understand the behavior of our algorithm, we made a list of the words \(w\) with the ten highest and ten lowest values \(\Pr(\PosC|w)\).
+We used our best set of model parameters: multinomial model; no stemming; \(\alpha=2.2\).
+Figure~\ref{fig:HighestWeightWords} lists these words, together with the log ratio \(\log(\Pr(\PosC|w) / \Pr(\NegC|w))\) (which is a monotone function of \(\Pr(\PosC|w)\)).
+We observe that the list seems to consist of uncommon words.
+This is not surprising: if a word appears exclusively in one class of document, then our model will infer that the word is much more likely to come from that class, even if the total number of occurrences is relatively small (as long as the number of occurrences is larger than the smoothing parameter \(\alpha\)).
 
 \begin{figure}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Tokens most likely to be positive} \\
-    token & \(log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Words most likely to be positive} \\
+    word & \(\log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
     shrek & 3.230 \\
     mulan & 3.138 \\
@@ -120,8 +165,8 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     sweetback & 2.490
 \end{tabular}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Tokens most likely to be negative} \\
-    token & \(log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Words most likely to be negative} \\
+    word & \(\log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
     nbsp & -3.405 \\
     seagal & -3.110 \\
@@ -134,13 +179,24 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     bye & -2.407 \\
     jawbreaker & -2.404
 \end{tabular}
-\caption{Highest-weighted tokens.}
+\caption{\label{fig:HighestWeightWords} Words most likely to come from positive or negative reviews}
 \end{figure}
+
+To better understand which words the model \emph{typically} finds useful in classifying documents, we made a second pair of lists, this time multiplying each word's weight by the number of occurrences of the word in the data set: so we sort words according to \(n_w \cdot \log(\Pr(\PosC|w) / \Pr(\NegC|w))\), where \(n_w\) is the number of occurrences of the word in the data set.
+The resulting lists are shown in Figure~\ref{fig:MostInfluentialWords}.
+These lists contain many common words and punctuation marks that we would not have thought were associated with negative or positive sentiments.
+
+There is reason to believe these words did have a strong effect on the performance of our classifier.
+If for each word \(w\) we define \(s_w = \log(\Pr(\PosC|w_{d,i}) / \Pr(\PosC|w_{d,i}))\), then
+our classification algorithm for a document \(d\) is equivalent to computing \(\sum_{i=1}^{m_d} s_w\) and choosing \(\PosC\) or \(\NegC\) if the sum is positive or netagive.
+A word with a high value of \(n_w \cdot s_w\) can be thought of as having a great influence over these sums.
+We therefore find it concerning that words like ``the'' and ``and'', and simple punctuation marks, score so highly.
+It is possible that these are indeed useful indicators for positve or negative sentiment, but just in case, in future work it is worth trying a version of the algorithm that excludes common tokens.
 
 \begin{figure}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Most influential positive tokens} \\
-    token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Most influential positive words} \\
+    word & \(n_w \cdot \log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
      , & 6989 \\
     the & 5681 \\
@@ -154,8 +210,8 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     a & 976.4
 \end{tabular}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Most influential negative tokens} \\
-    token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Most influential negative words} \\
+    word & \(n_w \cdot \log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
     . & -3176 \\
     " & -2935 \\
@@ -168,15 +224,12 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     ! & -974.1 \\
     no & -939.7
 \end{tabular}
-\caption{Tokens with highest \((\mathrm{weight} \cdot \# \mathrm{occurrences})\).}
+\caption{\label{fig:MostInfluentialWords} Words with much total influnce on our classifier (see Section~\ref{sec:TopWords}).}
 \end{figure}
 
 
-\subsection{Parallelization}
 
-
-
+\bibliography{report}{}
 \bibliographystyle{plain}
-\bibliography{report}
 
 \end{document}
