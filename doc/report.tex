@@ -1,6 +1,7 @@
 \documentclass{article}
 
 \usepackage{amsmath}
+\usepackage{graphicx}
 
 \newcommand{\PosC}{\mathrm{Pos}}
 \newcommand{\NegC}{\mathrm{Neg}}
@@ -56,10 +57,39 @@ We had three parameters to tune: multinomial or Bernoulli; whether to stem words
 
 We used 10-fold cross-validation to evaluate the performance of our algorithm.  We chose a random order for the documents once, and for each parameter setting, we evaluated the model ten times (using successive slices as the held-out test set) and recorded the average score of the model on those ten sets.
 
-\section{Results}
+
+\section{Experiments}
 \label{sec:Results}
 
-TODO
+We implemented our Na\"{i}ve Bayes sentiment classifier in Scala 2.9.1 and tested the classifier on the polarity movie review dataset \cite{polarity-dataset}. The dataset contains 1000  
+
+\begin{figure}
+  \centering
+  \caption{F1 measures for various combinations of parameters.}
+  \includegraphics[width=\textwidth]{graphs/all-combo.pdf}
+\end{figure}
+
+
+
+
+\subsection{Stemming}
+
+%Stemming is the process of reducing inflected and derived words to their stem \cite{porter-stemmer}. Stemming incidentally reduces the number of features used in the classifier. For example, using the Porter Stemmer \cite{porter-stemmer}, both ``apply'' and ``applying'' become the same stem ``appli''.
+
+We observed that stemming the words had a negative impact on the F1 score, while using more computational resources. We speculate that the choices of variations of words indeed carry connotations on sentiments. This observation is consistent with findings from previous works \cite{stanford-tutorial, sentiment-twitter}.
+
+
+\subsection{Binomial vs Multinomial}
+
+
+\subsection{Smoothing}
+
+\begin{figure}
+  \centering
+  \caption{Tuning smoothing factor alpha.}
+  \includegraphics[width=\textwidth]{graphs/alpha.pdf}
+\end{figure}
+
 
 \subsection{Top Term Weights}
 
@@ -140,5 +170,13 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
 \end{tabular}
 \caption{Tokens with highest \((\mathrm{weight} \cdot \# \mathrm{occurrences})\).}
 \end{figure}
+
+
+\subsection{Parallelization}
+
+
+
+\bibliographystyle{plain}
+\bibliography{report}
 
 \end{document}
