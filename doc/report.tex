@@ -52,11 +52,12 @@ We define \(F_1(\NegC)\) the same way but with the roles of ``favorable'' and ``
 \[\text{document score}=\tfrac12 (F_1(\PosC) + F_1(\NegC)) \ldotp\]
 The score of the model is the sum of the document scores.
 
-We had three parameters to tune: multinomial or Bernoulli; whether to stem words; and the smoothing parameter \(\alpha\).  We tried all combinations of the first two parameters, with \(\alpha\) varying between \(0.1\) and \(30\) with a ratio of \(\sqrt{2}\) between successive \(\alpha\)-values (\(0.1, 0.1\sqrt{2}, 0.2, 0.2\sqrt{2}, \dotsc\)).
+We had three parameters to tune: multinomial or Bernoulli; whether to stem words; and the smoothing parameter \(\alpha\).  We tried all combinations of the first two parameters, with \(\alpha\) varying between \(0.1\) and \(30\) with a ratio of \(\sqrt{2}\) between successive \(\alpha\)-values (\(0.1, 0.1\sqrt{2}, 0.2, 0.2\sqrt{2}, \dotsc\)).  Using a geometric series allowed us to try many ranges of size for the \(\alpha\) parameter; once we identified the range with the best performance, we did a second pass with a finer range of \(\alpha\)-values as explained in Section~\ref{sec:Results}.
 
 We used 10-fold cross-validation to evaluate the performance of our algorithm.  We chose a random order for the documents once, and for each parameter setting, we evaluated the model ten times (using successive slices as the held-out test set) and recorded the average score of the model on those ten sets.
 
 \section{Results}
+\label{sec:Results}
 
 TODO
 
