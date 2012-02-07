@@ -59,6 +59,24 @@ object Sentiment {
         labelCounts(label) += 1
       }
     }
+
+    def sortedWordWeights(multFreq: Boolean) = {
+      // A word's score for label L is
+      // log((count for L + alpha)
+      //     / (count of all words for L + alpha * vocabulary size))
+      val labels = List(Pos, Neg)
+      val scoreDenoms = labels map {
+	label => (label, log((labelCounts(label) + wordSet.size * parameters.alpha)))
+      } toMap
+      val unsorted = wordSet.toList.map { word =>
+	val labelScores: Map[SentimentLabel, Double] = labels.map({
+	  label => (label, log(counts(label, word) + parameters.alpha) - scoreDenoms(label))
+	}).toMap
+	val weight = labelScores(Pos) - labelScores(Neg)
+	(word, if (multFreq) (counts(Pos, word) + counts(Neg, word)) * weight else weight)
+      }
+      unsorted.sortWith{case ((aW, aS), (bW, bS)) => aS > bS}
+    }
   }
 
   def train(
@@ -122,7 +140,10 @@ object Sentiment {
       val model = train(parameters, trainingData)
       evaluate(model, testData)
     }}
-    scores.sum / scores.size
+    val fullModel = train(parameters, data)
+    val wordWeights = fullModel.sortedWordWeights(false)
+    val wordWeightsMultFreq = fullModel.sortedWordWeights(true)
+    (scores.sum / scores.size, wordWeights, wordWeightsMultFreq)
   }
 
   def main(args: Array[String]) {
@@ -138,9 +159,15 @@ object Sentiment {
       List(false, true).map { stem => {
         alphas.map { alpha => {
           val stemmer = if (stem) PorterStemmer else ((x : String) => x)
-          val score = run(all, sliceSize, Parameters(stemmer, alpha, binaryCount))
+          val (score, wordWeights, wordWeightsMultFreq) =
+	    run(all, sliceSize, Parameters(stemmer, alpha, binaryCount))
           val result = (binaryCount, stem, alpha, score)
           println(result)
+	  // For top-weighted terms, uncomment the next four lines.
+	  // println("Pos: " + wordWeights.slice(0, 10))
+	  // println("Neg: " + wordWeights.reverse.slice(0, 10))
+	  // println("Pos (mf): " + wordWeightsMultFreq.slice(0, 10))
+	  // println("Neg (mf): " + wordWeightsMultFreq.reverse.slice(0, 10))
           result
         }}
       }}
