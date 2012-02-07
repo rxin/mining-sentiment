@@ -51,8 +51,7 @@ object Sentiment {
     }
 
     def trainOne(label: SentimentLabel, words: Document) {
-      val stemWords = words.map(parameters.stemmer)
-      val maybeUniqWords = if (parameters.binaryCounts) stemWords.distinct else stemWords
+      val maybeUniqWords = if (parameters.binaryCounts) words.distinct else words
       wordSet ++= maybeUniqWords
       for (word <- maybeUniqWords) {
         counts(label, word) += 1
@@ -66,14 +65,14 @@ object Sentiment {
       //     / (count of all words for L + alpha * vocabulary size))
       val labels = List(Pos, Neg)
       val scoreDenoms = labels map {
-	label => (label, log((labelCounts(label) + wordSet.size * parameters.alpha)))
+        label => (label, log((labelCounts(label) + wordSet.size * parameters.alpha)))
       } toMap
       val unsorted = wordSet.toList.map { word =>
-	val labelScores: Map[SentimentLabel, Double] = labels.map({
-	  label => (label, log(counts(label, word) + parameters.alpha) - scoreDenoms(label))
-	}).toMap
-	val weight = labelScores(Pos) - labelScores(Neg)
-	(word, if (multFreq) (counts(Pos, word) + counts(Neg, word)) * weight else weight)
+        val labelScores: Map[SentimentLabel, Double] = labels.map({
+          label => (label, log(counts(label, word) + parameters.alpha) - scoreDenoms(label))
+        }).toMap
+        val weight = labelScores(Pos) - labelScores(Neg)
+        (word, if (multFreq) (counts(Pos, word) + counts(Neg, word)) * weight else weight)
       }
       unsorted.sortWith{case ((aW, aS), (bW, bS)) => aS > bS}
     }
@@ -88,7 +87,7 @@ object Sentiment {
   }
 
   def f1Score(model: Model, testData: Seq[LabeledDocument[SentimentLabel, Word]],
-              label: SentimentLabel): Double = {
+    label: SentimentLabel): Double = {
     val counts = (testData.map { doc =>
       val docLabel = model.classify(doc.features("body"))
       if (docLabel == doc.label) {
@@ -131,16 +130,24 @@ object Sentiment {
   }
 
   def run(data: Seq[LabeledDocument[SentimentLabel, Word]], sliceSize: Int,
-          parameters: Parameters) = {
+    parameters: Parameters) = {
+
+    // Do the stemming here so both training documents and testing documents are stemmed.
+    // Not the best design here since it couples Parameters and this function. But works!
+    val stemmedData = data.map { doc => {
+      new LabeledDocument(doc.id, doc.label,
+        Map("body" -> doc.features("body").map(parameters.stemmer)))
+    }}
+
     val scores = (0 until 10).par map { i => {
       val a = i * sliceSize
       val b = (i + 1) * sliceSize
-      val testData = data.slice(a, b)
-      val trainingData = data.take(a) ++ data.drop(b)
+      val testData = stemmedData.slice(a, b)
+      val trainingData = stemmedData.take(a) ++ stemmedData.drop(b)
       val model = train(parameters, trainingData)
       evaluate(model, testData)
     }}
-    val fullModel = train(parameters, data)
+    val fullModel = train(parameters, stemmedData)
     val wordWeights = fullModel.sortedWordWeights(false)
     val wordWeightsMultFreq = fullModel.sortedWordWeights(true)
     (scores.sum / scores.size, wordWeights, wordWeightsMultFreq)
@@ -151,8 +158,8 @@ object Sentiment {
     val pos = getLabeledDocuments(new File(dataPath, "pos").listFiles, Pos)
     val all = masterRandom.shuffle(neg ++ pos)
 
-    //val alphas = collection.immutable.Range.Double(log(0.1), log(30), log(2)/2).map(x => exp(x))
-    val alphas = collection.immutable.Range.Double(0.8, 4, 0.2)
+    val alphas = collection.immutable.Range.Double(log(0.1), log(30), log(2)/2).map(x => exp(x))
+    //val alphas = collection.immutable.Range.Double(0.8, 4, 0.2)
     val sliceSize = all.size / 10
 
     List(false, true).map { binaryCount => { // Multinomial vs Bernoulli
@@ -160,14 +167,14 @@ object Sentiment {
         alphas.map { alpha => {
           val stemmer = if (stem) PorterStemmer else ((x : String) => x)
           val (score, wordWeights, wordWeightsMultFreq) =
-	    run(all, sliceSize, Parameters(stemmer, alpha, binaryCount))
+            run(all, sliceSize, Parameters(stemmer, alpha, binaryCount))
           val result = (binaryCount, stem, alpha, score)
           println(result)
-	  // For top-weighted terms, uncomment the next four lines.
-	  // println("Pos: " + wordWeights.slice(0, 10))
-	  // println("Neg: " + wordWeights.reverse.slice(0, 10))
-	  // println("Pos (mf): " + wordWeightsMultFreq.slice(0, 10))
-	  // println("Neg (mf): " + wordWeightsMultFreq.reverse.slice(0, 10))
+          // For top-weighted terms, uncomment the next four lines.
+          // println("Pos: " + wordWeights.slice(0, 10))
+          // println("Neg: " + wordWeights.reverse.slice(0, 10))
+          // println("Pos (mf): " + wordWeightsMultFreq.slice(0, 10))
+          // println("Neg (mf): " + wordWeightsMultFreq.reverse.slice(0, 10))
           result
         }}
       }}
