@@ -112,30 +112,34 @@ object Sentiment {
     }
   }
 
+  def run(data: Seq[LabeledDocument[SentimentLabel, Word]], sliceSize: Int,
+          parameters: Parameters) = {
+    val scores = (0 until 10).par map { i => {
+      val a = i * sliceSize
+      val b = (i + 1) * sliceSize
+      val testData = data.slice(a, b)
+      val trainingData = data.take(a) ++ data.drop(b)
+      val model = train(parameters, trainingData)
+      evaluate(model, testData)
+    }}
+    scores.sum / scores.size
+  }
+
   def main(args: Array[String]) {
     val neg = getLabeledDocuments(new File(dataPath, "neg").listFiles, Neg)
     val pos = getLabeledDocuments(new File(dataPath, "pos").listFiles, Pos)
     val all = masterRandom.shuffle(neg ++ pos)
 
-    val alphas =
-      List(1.0) ++
-      collection.immutable.Range.Double(log(0.1), log(3), log(2)/2).map(x => exp(x))
+    //val alphas = collection.immutable.Range.Double(log(0.1), log(30), log(2)/2).map(x => exp(x))
+    val alphas = collection.immutable.Range.Double(0.8, 4, 0.2)
     val sliceSize = all.size / 10
-   
+
     List(false, true).map { binaryCount => { // Multinomial vs Bernoulli
       List(false, true).map { stem => {
         alphas.map { alpha => {
           val stemmer = if (stem) PorterStemmer else ((x : String) => x)
-          val parameters = Parameters(stemmer, alpha, binaryCount)
-          val scores = (0 until 10).par map { i => {
-            val a = i * sliceSize
-            val b = (i + 1) * sliceSize
-            val testData = all.slice(a, b)
-            val trainingData = all.take(a) ++ all.drop(b)
-            val model = train(parameters, trainingData)
-            evaluate(model, testData)
-          }}
-          val result = (binaryCount, stem, alpha, scores.sum / scores.size)
+          val score = run(all, sliceSize, Parameters(stemmer, alpha, binaryCount))
+          val result = (binaryCount, stem, alpha, score)
           println(result)
           result
         }}
