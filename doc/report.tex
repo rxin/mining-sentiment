@@ -2,6 +2,7 @@
 
 \usepackage{amsmath}
 
+\DeclareMathOperator{\Argmax}{argmax}
 \newcommand{\PosC}{\mathrm{Pos}}
 \newcommand{\NegC}{\mathrm{Neg}}
 
@@ -21,7 +22,8 @@ where
 \[\Pr(d|c)=\sum_{i=1}^{m_d}\Pr(w_i|c)\ldotp\]
 and our training procedure produces
 \[\Pr(w|c)=\frac{n_{w,c}+\alpha}{\sum_{w'}(n_{w',c}+\alpha)}\ldotp\]
-We try different values for \(\alpha\) as explained in Section~\ref{sec:EvalAndTuning}.
+When testing, our model classifies a document \(d\) as \(\Argmax_c\Pr(c|d)\).
+\(\alpha\) is a parameter of the model; we explain parameter selection in Section~\ref{sec:EvalAndTuning}.
 
 \subsection{Evaluation and Parameter Tuning}
 \label{sec:EvalAndTuning}
@@ -62,6 +64,7 @@ We used 10-fold cross-validation to evaluate the performance of our algorithm.  
 TODO
 
 \subsection{Top Term Weights}
+\label{sec:TopWords}
 
 % Program output:
 %(false,false,2.2,0.822)
@@ -70,13 +73,16 @@ TODO
 %Pos (mf): List((,,6988.590), (the,5680.522), (and,5062.829), (is,3480.295), (of,3031.905), (his,2302.1047630517264), (as,2103.495762997044), (he,1394.452), (in,1206.934), (a,976.3928793058776))
 %Neg (mf): List((.,-3176.335), (",-2935.369), (i,-1874.9698007890427), (movie,-1832.499865514896), (?,-1631.999), (bad,-1574.092), (this,-1474.2238454822032), (have,-1308.290), (!,-974.078), (no,-939.664))
 
-
-This is for our best set of model parameters: multinomial model; no stemming; \(\alpha=2.2\).
+To better understand the behavior of our algorithm, we made a list of the words \(w\) with the ten highest and ten lowest values \(\Pr(\PosC|w)\).
+We used our best set of model parameters: multinomial model; no stemming; \(\alpha=2.2\).
+Figure~\ref{fig:HighestWeightWords} lists these words, together with the log ratio \(\log(\Pr(\PosC|w) / \Pr(\NegC|w))\) (which is a monotone function of \(\Pr(\PosC|w)\)).
+We observe that the list seems to consist of uncommon words.
+This is not surprising: if a word appears exclusively in one class of document, then our model will infer that the word is much more likely to come from that class, even if the total number of occurrences is relatively small (as long as the number of occurrences is larger than the smoothing parameter \(\alpha\)).
 
 \begin{figure}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Tokens most likely to be positive} \\
-    token & \(log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Words most likely to be positive} \\
+    word & \(\log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
     shrek & 3.230 \\
     mulan & 3.138 \\
@@ -90,8 +96,8 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     sweetback & 2.490
 \end{tabular}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Tokens most likely to be negative} \\
-    token & \(log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Words most likely to be negative} \\
+    word & \(\log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
     nbsp & -3.405 \\
     seagal & -3.110 \\
@@ -104,13 +110,24 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     bye & -2.407 \\
     jawbreaker & -2.404
 \end{tabular}
-\caption{Highest-weighted tokens.}
+\caption{\label{fig:HighestWeightWords} Words most likely to come from positive or negative reviews}
 \end{figure}
+
+To better understand which words the model \emph{typically} finds useful in classifying documents, we made a second pair of lists, this time multiplying each word's weight by the number of occurrences of the word in the data set: so we sort words according to \(n_w \cdot \log(\Pr(\PosC|w) / \Pr(\NegC|w))\), where \(n_w\) is the number of occurrences of the word in the data set.
+The resulting lists are shown in Figure~\ref{fig:MostInfluentialWords}.
+These lists contain many common words and punctuation marks that we would not have thought were associated with negative or positive sentiments.
+
+There is reason to believe these words did have a strong effect on the performance of our classifier.
+If for each word \(w\) we define \(s_w = \log(\Pr(\PosC|w_{d,i}) / \Pr(\PosC|w_{d,i}))\), then
+our classification algorithm for a document \(d\) is equivalent to computing \(\sum_{i=1}^{m_d} s_w\) and choosing \(\PosC\) or \(\NegC\) if the sum is positive or netagive.
+A word with a high value of \(n_w \cdot s_w\) can be thought of as having a great influence over these sums.
+We therefore find it concerning that words like ``the'' and ``and'', and simple punctuation marks, score so highly.
+It is possible that these are indeed useful indicators for positve or negative sentiment, but just in case, in future work it is worth trying a version of the algorithm that excludes common tokens.
 
 \begin{figure}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Most influential positive tokens} \\
-    token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Most influential positive words} \\
+    word & \(n_w \cdot \log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
      , & 6989 \\
     the & 5681 \\
@@ -124,8 +141,8 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     a & 976.4
 \end{tabular}
 \begin{tabular}{c|c}
-    \multicolumn{2}{c}{Most influential negative tokens} \\
-    token & \((\# \mathrm{occurrences}) \cdot \log(p_+ / p_-)\) \\
+    \multicolumn{2}{c}{Most influential negative words} \\
+    word & \(n_w \cdot \log(\Pr(\PosC|w) / \Pr(\NegC|w))\) \\
     \hline
     . & -3176 \\
     " & -2935 \\
@@ -138,7 +155,7 @@ This is for our best set of model parameters: multinomial model; no stemming; \(
     ! & -974.1 \\
     no & -939.7
 \end{tabular}
-\caption{Tokens with highest \((\mathrm{weight} \cdot \# \mathrm{occurrences})\).}
+\caption{\label{fig:MostInfluentialWords} Words with much total influnce on our classifier (see Section~\ref{sec:TopWords}).}
 \end{figure}
 
 \end{document}
