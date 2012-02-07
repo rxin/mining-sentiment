@@ -8,22 +8,62 @@
 
 \begin{document}
 
+\section{The Problem}
+
+We design an algorithm to solve the following problem.
+We are presented with a set of movie reviews from Pang and Lee's movie sentiment data set~\cite{Pang+Lee:04a}.
+Each review is a sequence of tokens (words or punctuation marks).
+Some of the reviews have a label of \(\PosC\) or \(\NegC\) (the training set) and for other reviews, the label has been removed.
+Our task is to guess the missing labels.
+
 \section{Method}
+
+\subsection{Model}
+
+We use a na\"ive Bayes model, in which the documents are generated according to the following process.
+First, a class \(c\) is chosen from a probability distribution \(\Pr(c)\).
+Then, a document from class \(c\) is generated.
+We tried a multinomial model and a Bernoulli model to model this process.
+\begin{itemize}
+\item \emph{Multinomial model.}  A document length \(m_d\) is chosen and \(m_d\) words \(w_{d,1}, \dotsc, w_{d,m_d}\) are chosen independently from a distribution \(\Pr(w|c)\).
+\item \emph{Bernoulli model.}  For each word \(w\) in the vocabulary, \(w\) is added to the document with probability \(\Pr(w|c)\).
+\end{itemize}
+The distributions \(\Pr(c)\) and \(\Pr(w|c)\) are parameters of the model.
 
 \subsection{Document Representation}
 
-We tried four different document representations: as bags of words for the multinomial model; as sets of words for the Bernoulli model; and both of these after applying the Porter Stemming Algorithm.
+We represent each document \(d\) as a list of words \(w_{d,1}, \dotsc, w_{d,m_d}\).
+In the simplest case, \(w_{d,i}\) was equal to the \(i\)-th token of the document as it appeared in the data set.
+This is an appropriate representation when using the multinomial model of document generation.
+When using the Bernoulli model, we removed duplicate occurrences of words.
 
-\subsection{Model and Training}
+We tried using the Porter stemming algorithm.
+Stemming is the process of reducing inflected and derived words to their stem \cite{porter-stemmer}.
+Word \(w_{d,i}\) in our document representation is then the result of applying the stemming function to the \(i\)-th word of the document as it appeared in the input data set.
+Stemming incidentally reduces the number of features used in the classifier.
+For example, using the Porter Stemmer \cite{porter-stemmer}, both ``apply'' and ``applying'' become the same stem ``appli''.
 
-We use a na\"ive Bayes classifier: for a class \(c \in \{\PosC, \NegC\}\) and document \(d\) consisting of words \(w_{d,1},\dotsc,w_{d,m_d}\) (where each word occurs at most once in the Bernoulli version),
+
+In all, we tried four different document representations: multinomial and Bernoulli, together with not-stemmed words and word stems.
+In Section~\ref{sec:EvalAndTuning}, we explain how we chose among these four possibilities.
+
+\subsection{Training and Classification}
+
+Using the na\"ive Bayes classifier, for a class \(c \in \{\PosC, \NegC\}\) and document \(d\) consisting of words \(w_{d,1},\dotsc,w_{d,m_d}\) (where each word occurs at most once in the Bernoulli version), we have
 \[\Pr(c|d)=\frac{\Pr(d|c)\Pr(c)}{\Pr(d)}\]
 where
 \[\Pr(d|c)=\sum_{i=1}^{m_d}\Pr(w_i|c)\ldotp\]
-and our training procedure produces
+Our training procedure sets \(\Pr(c)\) to be the fraction of documents with class \(c\),%
+\footnote{After inspecting the data set, we found this ratio to be \(1/2\).  Setting \(P(c)\) to \(1/2\) is equivalent to dropping the term, so we ignored it in our implementation.}
+and sets
 \[\Pr(w|c)=\frac{n_{w,c}+\alpha}{\sum_{w'}(n_{w',c}+\alpha)}\ldotp\]
 When testing, our model classifies a document \(d\) as \(\Argmax_c\Pr(c|d)\).
-\(\alpha\) is a parameter of the model; we explain parameter selection in Section~\ref{sec:EvalAndTuning}.
+
+\(\alpha\) is a parameter of the model.
+Setting \(\alpha=0\), training would maximumize the likelihood of the data given the parameters.
+Unfortunately, the maximum likelihood parameters set \(\Pr(d|c)=0\) whenever document \(d\) contains a word that never occurred in class \(c\) in the training data.
+It is desirable to allow some new uses of words in new documents, so we set \(\alpha\) to be a positive number.
+We explain how we choose the value of \(\alpha\) in Section~\ref{sec:EvalAndTuning}.
 
 \subsection{Evaluation and Parameter Tuning}
 \label{sec:EvalAndTuning}
@@ -157,5 +197,8 @@ It is possible that these are indeed useful indicators for positve or negative s
 \end{tabular}
 \caption{\label{fig:MostInfluentialWords} Words with much total influnce on our classifier (see Section~\ref{sec:TopWords}).}
 \end{figure}
+
+\bibliography{report}{}
+\bibliographystyle{plain}
 
 \end{document}
