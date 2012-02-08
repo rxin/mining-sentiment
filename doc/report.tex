@@ -7,19 +7,22 @@
 \newcommand{\PosC}{\mathrm{Pos}}
 \newcommand{\NegC}{\mathrm{Neg}}
 
+\title{Na\"{i}ve Bayes Classifier for Sentiment}
+\author{James Cook, Reynold Xin}
+
+\date{2012-02-07}
+
 \begin{document}
+	
+\maketitle
 
 \section{The Problem}
+We design an algorithm to solve the following problem. Given a document, we classify the sentiment of the document as either positive or negative. This problem is known as binary sentiment analysis and has broad applications. For example, it can be used to understand the customer feedback for a particular product automatically without manually reading all the reviews. In this particular assignment, we are tasked with sentiment analysis for movie reviews.
 
-We design an algorithm to solve the following problem.
-We are presented with a set of movie reviews from Pang and Lee's movie sentiment data set~\cite{Pang+Lee:04a}.
-Each review is a sequence of tokens (words or punctuation marks).
-Some of the reviews have a label of \(\PosC\) or \(\NegC\) (the training set) and for other reviews, the label has been removed.
-Our task is to guess the missing labels.
 
 \section{Method}
 
-\subsection{Model}
+\subsection{Classifier Model}
 
 We use a na\"ive Bayes model, in which the documents are generated according to the following process.
 First, a class \(c\) is chosen from a probability distribution \(\Pr(c)\).
@@ -44,7 +47,6 @@ Word \(w_{d,i}\) in our document representation is then the result of applying t
 Stemming incidentally reduces the number of features used in the classifier.
 For example, using the Porter Stemmer \cite{porter-stemmer}, both ``apply'' and ``applying'' become the same stem ``appli''.
 
-
 In all, we tried four different document representations: multinomial and Bernoulli, together with not-stemmed words and word stems.
 In Section~\ref{sec:EvalAndTuning}, we explain how we chose among these four possibilities.
 
@@ -64,12 +66,19 @@ When testing, our model classifies a document \(d\) as \(\Argmax_c\Pr(c|d)\).
 Setting \(\alpha=0\), training would maximumize the likelihood of the data given the parameters.
 Unfortunately, the maximum likelihood parameters set \(\Pr(d|c)=0\) whenever document \(d\) contains a word that never occurred in class \(c\) in the training data.
 It is desirable to allow some new uses of words in new documents, so we set \(\alpha\) to be a positive number.
-We explain how we choose the value of \(\alpha\) in Section~\ref{sec:EvalAndTuning}.
+We explain how we choose the value of \(\alpha\) in next section.
 
-\subsection{Evaluation and Parameter Tuning}
-\label{sec:EvalAndTuning}
 
-To avoid confusion, we will refer to positive reviews as ``favorable'' and negative reviews as ``disfavorable'' in this section.  We chose evaluate the model's performance on a testing set using the \(F_1\) score.  The \(F_1\) score is defined as:
+\section{Experiments}
+\label{sec:Results}
+
+
+\subsection{Evaluation Methodology}
+
+We implemented our Na\"{i}ve Bayes sentiment classifier in Scala 2.9.1 and tested the classifier on the polarity movie review dataset \cite{polarity-dataset, Pang+Lee:04a}. The dataset contains 1000 documents labeled as ``favorable'' and 1000 documents labeled as ``disfavorable''.
+\footnote{To avoid confusion, we will refer to positive reviews as ``favorable'' and negative reviews as ``disfavorable'' in this section.}
+
+We chose evaluate the model's performance on a testing set using the \(F_1\) score.  The \(F_1\) score is defined as:
 \[
   F_1=
   \frac
@@ -90,46 +99,41 @@ For example, if we are interested in the model's performance with the label ``fa
   disfavorable & disfavorable & true negative \\
 \end{tabular}
 
-We define the resulting score to be \(F_1(\PosC)\).
+We define the resulting F1 model score to be \(F_1(\PosC)\).
 We define \(F_1(\NegC)\) the same way but with the roles of ``favorable'' and ``disfavorable'' reversed, and score the model as
 \[\text{model score}=\tfrac12 (F_1(\PosC) + F_1(\NegC)) \ldotp\]
 
-We had three parameters to tune: multinomial or Bernoulli; whether to stem words; and the smoothing parameter \(\alpha\).  We tried all combinations of the first two parameters, with \(\alpha\) varying between \(0.1\) and \(30\) with a ratio of \(\sqrt{2}\) between successive \(\alpha\)-values (\(0.1, 0.1\sqrt{2}, 0.2, 0.2\sqrt{2}, \dotsc\)).  Using a geometric series allowed us to try many ranges of size for the \(\alpha\) parameter; once we identified the range with the best performance, we did a second pass with a finer range of \(\alpha\)-values as explained in Section~\ref{sec:Results}.
+We had three parameters to tune: multinomial or Bernoulli; whether to stem words; and the smoothing parameter \(\alpha\).  We tried all combinations of the first two parameters, with \(\alpha\) varying between \(0.1\) and \(30\) with a ratio of \(\sqrt{2}\) between successive \(\alpha\)-values (\(0.1, 0.1\sqrt{2}, 0.2, 0.2\sqrt{2}, \dotsc\)).  Using a geometric series allowed us to try many ranges of size for the \(\alpha\) parameter; once we identified the range with the best performance, we did a second pass with a finer range of \(\alpha\)-values as explained in Section~\ref{sec:alpha}.
 
 We used 10-fold cross-validation to evaluate the performance of our algorithm.  We chose a random order for the documents once, and for each parameter setting, we evaluated the model ten times (using successive slices as the held-out test set) and recorded the average score of the model on those ten sets.
 
 
-\section{Experiments}
-\label{sec:Results}
+\subsection{Parameter Tuning}
+\label{sec:alpha}
 
-We implemented our Na\"{i}ve Bayes sentiment classifier in Scala 2.9.1 and tested the classifier on the polarity movie review dataset \cite{polarity-dataset}. The dataset contains 1000  
+Figure \ref{all-combo} shows the F1 scores for various combinations of parameters. The x\-axis varies the value for smoothing parameter \(\alpha\), and the y\-axis reports the F1 model score. From the graph, it is obvious that the best setup is using a multinomial model without stemming.
 
 \begin{figure}
   \centering
   \caption{F1 measures for various combinations of parameters.}
-  \includegraphics[width=\textwidth]{graphs/all-combo.pdf}
+  \includegraphics[width=0.9\textwidth]{graphs/all-combo.pdf}
+  \label{all-combo}
 \end{figure}
-
-
-
-
-\subsection{Stemming}
-
-%Stemming is the process of reducing inflected and derived words to their stem \cite{porter-stemmer}. Stemming incidentally reduces the number of features used in the classifier. For example, using the Porter Stemmer \cite{porter-stemmer}, both ``apply'' and ``applying'' become the same stem ``appli''.
-
-We observed that stemming the words had a negative impact on the F1 score, while using more computational resources. We speculate that the choices of variations of words indeed carry connotations on sentiments. This observation is consistent with findings from previous works \cite{stanford-tutorial, sentiment-twitter}.
-
-
-\subsection{Binomial vs Multinomial}
-
-
-\subsection{Smoothing}
 
 \begin{figure}
   \centering
   \caption{Tuning smoothing factor alpha.}
-  \includegraphics[width=\textwidth]{graphs/alpha.pdf}
+  \includegraphics[width=0.9\textwidth]{graphs/alpha.pdf}
 \end{figure}
+
+
+\textbf{Stemming}: We observed that stemming the words had a negative impact on the F1 score for both multinomial or Bernoulli models, while using more computational resources. We speculate that the choices of variations of words indeed carry connotations on sentiments. This observation is consistent with findings from previous works \cite{stanford-tutorial, sentiment-twitter}.
+
+\textbf{multinomial or Bernoulli}: We observed that multinomial models perform better than Bernoulli models. This is expected as movie reviews are long documents. Based on our understanding, multinomial models work better for longer documents, while Bernoulli models work better for very short documents.
+
+Somewhat surprising is the result that when the smoothing parameter \(\alpha\) is large, Bernoulli models actually have reasonable model score. Smoothing parameter \(\alpha\) defines the weight for unobserved words. Having a large smoothing parameter effectively reduces the weight for rare, observed words.
+
+\textbf{Smoothing parameter \(\alpha\)}: For the best model setup (i.e. multinomial without stemming), we trained our classifier using a finer range of \(\alpha\)-values, chosen between 0.6 to 3.8 with setup size 0.2. Assuming this is a convex function, we found the best range for \(\alpha\) is between 1.6 to 3.6. 
 
 
 \subsection{Top Term Weights}
@@ -227,6 +231,9 @@ It is possible that these are indeed useful indicators for positve or negative s
 \caption{\label{fig:MostInfluentialWords} Words with much total influnce on our classifier (see Section~\ref{sec:TopWords}).}
 \end{figure}
 
+
+\section{Conclusion}
+We designed and implemented a Na\"{i}ve Bayes sentiment analysis classifier. Using a movie review dataset, we tested four different setups for the sentiment classifier and concluded that the best setup is using a multinomial model without stemming. We also tested different values for the smoothing parameter and found the best smoothing value to be between 1.6 and 2.6.
 
 
 \bibliography{report}{}
